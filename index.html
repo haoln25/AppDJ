@@ -74,46 +74,29 @@
 </head>
 <body>
   <div class="app">
-    <!-- Header -->
     <div class="header">Sound App</div>
-
-    <!-- Nhạc nền -->
     <div class="section-title">Nhạc nền</div>
     <div class="buttons">
-      <button data-bg="bg1.mp3">Background 1</button>
-      
-      <button data-bg="Buon.mp3">BG2. Buồn</button>
-      <button data-bg="bg1.mp3">Background 1</button>
-      <button data-bg="affterchuyensinh.mp3">BG3.Chuyển Sinh</button>
-      <button data-bg="mario.mp3">BG5 Game Ải 1</button>
-      <button data-bg="bg1.mp3">Background 1</button>
+      <button data-bg="bg1.mp3" aria-label="Phát nhạc nền Background 1">Background 1</button>
+      <button data-bg="Buon.mp3" aria-label="Phát nhạc nền Buồn">BG2. Buồn</button>
+      <button data-bg="affterchuyensinh.mp3" aria-label="Phát nhạc nền Chuyển Sinh">BG3. Chuyển Sinh</button>
+      <button data-bg="mario.mp3" aria-label="Phát nhạc nền Game Ải 1">BG5. Game Ải 1</button>
     </div>
-
-    <!-- Âm thanh hiệu ứng -->
     <div class="section-title">Âm thanh hiệu ứng</div>
     <div class="buttons">
-      <button data-sfx="XuyenKhong.mp3">Sfx.Xuyên Không</button>
-      <button data-sfx="Vica.mp3">Sfx. Anh vi cá</button>
-      <button data-sfx="sfxxihoi.mp3">Sfx.Xì hơi</button>
-      <button data-sfx="effect4.mp3">Hiệu ứng 4</button>
-      <button data-sfx="XuyenKhong.mp3">Sfx.Xuyên Không</button>
-      <button data-sfx="vica.mp3">Sfx. Anh vi cá</button>
-      <button data-sfx="sfxxihoi.mp3">Sfx.Xì hơi</button>
-      <button data-sfx="effect4.mp3">Hiệu ứng 4</button>
-      <button data-sfx="XuyenKhong.mp3">Sfx.Xuyên Không</button>
-      <button data-sfx="effect4.mp3">Hiệu ứng 4</button>
+      <button data-sfx="XuyenKhong.mp3" aria-label="Phát hiệu ứng Xuyên Không">Sfx. Xuyên Không</button>
+      <button data-sfx="Vica.mp3" aria-label="Phát hiệu ứng Anh Vi Cá">Sfx. Anh Vi Cá</button>
+      <button data-sfx="sfxxihoi.mp3" aria-label="Phát hiệu ứng Xì Hơi">Sfx. Xì Hơi</button>
+      <button data-sfx="effect4.mp3" aria-label="Phát hiệu ứng 4">Hiệu ứng 4</button>
     </div>
-
-    <!-- Footer -->
     <div class="footer">
       <div id="status">Trạng thái: Chưa phát gì</div>
-      <!-- Controls nhạc nền -->
       <div class="controls">
         <button id="playPauseBtn">Play</button>
-        <input type="range" id="seekBar" class="seek-bar" value="0" min="0" max="100">
+        <input type="range" id="volume" min="0" max="1" step="0.01" value="1" aria-label="Điều chỉnh âm lượng">
+        <input type="range" id="seekBar" class="seek-bar" value="0" min="0" max="100" aria-label="Thanh điều chỉnh thời gian nhạc nền">
         <div id="time">0:00 / 0:00</div>
       </div>
-      <!-- Nút kết thúc hiệu ứng -->
       <div class="controls">
         <button id="stopSfxBtn">Kết thúc hiệu ứng</button>
       </div>
@@ -124,13 +107,17 @@
     const statusText = document.getElementById("status");
     const playPauseBtn = document.getElementById("playPauseBtn");
     const seekBar = document.getElementById("seekBar");
+    const volumeSlider = document.getElementById("volume");
     const timeDisplay = document.getElementById("time");
     const stopSfxBtn = document.getElementById("stopSfxBtn");
 
     let bgAudio = null;
     let currentSfx = null;
 
-    // --- Nhạc nền ---
+    function disableSfxButtons(disabled) {
+      document.querySelectorAll("[data-sfx]").forEach(btn => btn.disabled = disabled);
+    }
+
     document.querySelectorAll("[data-bg]").forEach(btn => {
       btn.addEventListener("click", () => {
         if (bgAudio) {
@@ -139,10 +126,16 @@
         }
         bgAudio = new Audio("sounds/" + btn.dataset.bg);
         bgAudio.loop = true;
-        bgAudio.play();
+        bgAudio.volume = volumeSlider.value;
+        bgAudio.play().catch(() => {
+          statusText.textContent = "Lỗi: Không thể tải nhạc nền: " + btn.textContent;
+        });
         playPauseBtn.textContent = "Pause";
         statusText.textContent = "Đang phát nhạc nền: " + btn.textContent;
 
+        bgAudio.addEventListener("loadedmetadata", () => {
+          seekBar.max = bgAudio.duration;
+        });
         bgAudio.addEventListener("timeupdate", () => {
           seekBar.value = (bgAudio.currentTime / bgAudio.duration) * 100;
           updateTime();
@@ -150,19 +143,20 @@
       });
     });
 
-    // --- Hiệu ứng ---
     document.querySelectorAll("[data-sfx]").forEach(btn => {
       btn.addEventListener("click", () => {
-        if (bgAudio && !bgAudio.paused) {
-          bgAudio.pause();
-        }
+        if (bgAudio && !bgAudio.paused) bgAudio.pause();
         if (currentSfx) {
           currentSfx.pause();
           currentSfx.currentTime = 0;
         }
+        disableSfxButtons(true);
         currentSfx = new Audio("sounds/" + btn.dataset.sfx);
         currentSfx.volume = 1.0;
-        currentSfx.play();
+        currentSfx.play().catch(() => {
+          statusText.textContent = "Lỗi: Không thể tải hiệu ứng: " + btn.textContent;
+          resumeBackground();
+        });
         statusText.textContent = "Hiệu ứng: " + btn.textContent;
 
         currentSfx.addEventListener("timeupdate", () => {
@@ -170,25 +164,24 @@
             fadeOut(currentSfx, 1000);
           }
         });
-
         currentSfx.onended = () => {
+          disableSfxButtons(false);
           resumeBackground();
         };
       });
     });
 
-    // --- Kết thúc sớm hiệu ứng ---
     stopSfxBtn.addEventListener("click", () => {
       if (currentSfx) {
         fadeOut(currentSfx, 500, () => {
           currentSfx.pause();
           currentSfx.currentTime = 0;
+          disableSfxButtons(false);
           resumeBackground();
         });
       }
     });
 
-    // --- Play / Pause ---
     playPauseBtn.addEventListener("click", () => {
       if (!bgAudio) return;
       if (bgAudio.paused) {
@@ -200,14 +193,16 @@
       }
     });
 
-    // --- Seek ---
     seekBar.addEventListener("input", () => {
       if (bgAudio) {
         bgAudio.currentTime = (seekBar.value / 100) * bgAudio.duration;
       }
     });
 
-    // --- Hàm tiện ích ---
+    volumeSlider.addEventListener("input", (e) => {
+      if (bgAudio) bgAudio.volume = e.target.value;
+    });
+
     function updateTime() {
       if (!bgAudio) return;
       const current = formatTime(bgAudio.currentTime);
@@ -223,16 +218,19 @@
     }
 
     function fadeOut(audio, duration, callback) {
-      let step = audio.volume / (duration / 100);
-      let fadeInterval = setInterval(() => {
-        if (audio.volume > step) {
-          audio.volume -= step;
+      const startVolume = audio.volume;
+      const startTime = performance.now();
+      function fade() {
+        const elapsed = performance.now() - startTime;
+        audio.volume = Math.max(0, startVolume * (1 - elapsed / duration));
+        if (audio.volume > 0) {
+          requestAnimationFrame(fade);
         } else {
-          audio.volume = 0;
-          clearInterval(fadeInterval);
+          audio.pause();
           if (callback) callback();
         }
-      }, 100);
+      }
+      requestAnimationFrame(fade);
     }
 
     function resumeBackground() {
