@@ -125,130 +125,81 @@
   <audio id="sfxAudio"></audio>
 
   <script>
-    const bgAudio = document.getElementById("bgAudio");
-    const sfxAudio = document.getElementById("sfxAudio");
-
-    const statusText = document.getElementById("status");
-    const playPauseBtn = document.getElementById("playPauseBtn");
+    const bgMusic = document.getElementById("bgMusic");
     const seekBar = document.getElementById("seekBar");
-    const timeDisplay = document.getElementById("time");
-    const stopSfxBtn = document.getElementById("stopSfxBtn");
+    let currentSfx = null;
+    let fadeInterval = null;
 
-    // --- Nhạc nền ---
-    document.querySelectorAll("[data-bg]").forEach(btn => {
-      btn.addEventListener("click", () => {
-        bgAudio.src = "sounds/" + btn.dataset.bg;
-        bgAudio.load();
-        bgAudio.play();
-        playPauseBtn.textContent = "Pause";
-        statusText.textContent = "Đang phát nhạc nền: " + btn.textContent;
-      });
-    });
-
-    bgAudio.addEventListener("timeupdate", () => {
-      if (bgAudio.duration) {
-        seekBar.value = (bgAudio.currentTime / bgAudio.duration) * 100;
-        updateTime();
-      }
-    });
-
-    // --- Hiệu ứng ---
-    document.querySelectorAll("[data-sfx]").forEach(btn => {
-      btn.addEventListener("click", () => {
-        if (!sfxAudio.paused) {
-          sfxAudio.pause();
-          sfxAudio.currentTime = 0;
-        }
-
-        if (!bgAudio.paused) {
-          bgAudio.pause();
-        }
-
-        sfxAudio.src = "sounds/" + btn.dataset.sfx;
-        sfxAudio.volume = 1;
-        sfxAudio.load();
-        sfxAudio.play();
-        statusText.textContent = "Hiệu ứng: " + btn.textContent;
-      });
-    });
-
-    // Fade-out khi hiệu ứng gần hết
-    sfxAudio.addEventListener("timeupdate", () => {
-      if (sfxAudio.duration && sfxAudio.currentTime > sfxAudio.duration - 1.2) {
-        fadeOut(sfxAudio, 1000);
-      }
-    });
-
-    sfxAudio.addEventListener("ended", () => {
-      resumeBackground();
-    });
-
-    // --- Kết thúc sớm hiệu ứng ---
-    stopSfxBtn.addEventListener("click", () => {
-      if (!sfxAudio.paused) {
-        fadeOut(sfxAudio, 500, () => {
-          sfxAudio.pause();
-          sfxAudio.currentTime = 0;
-          resumeBackground();
-        });
-      }
-    });
-
-    // --- Play / Pause ---
-    playPauseBtn.addEventListener("click", () => {
-      if (bgAudio.src === "") return;
-      if (bgAudio.paused) {
-        bgAudio.play();
-        playPauseBtn.textContent = "Pause";
-      } else {
-        bgAudio.pause();
-        playPauseBtn.textContent = "Play";
-      }
-    });
-
-    // --- Seek ---
-    seekBar.addEventListener("input", () => {
-      if (bgAudio.duration) {
-        bgAudio.currentTime = (seekBar.value / 100) * bgAudio.duration;
-      }
-    });
-
-    // --- Hàm tiện ích ---
-    function updateTime() {
-      const current = formatTime(bgAudio.currentTime);
-      const total = formatTime(bgAudio.duration);
-      timeDisplay.textContent = `${current} / ${total}`;
-    }
-
-    function formatTime(sec) {
-      if (isNaN(sec)) return "0:00";
-      let minutes = Math.floor(sec / 60);
-      let seconds = Math.floor(sec % 60);
-      return `${minutes}:${seconds < 10 ? "0" : ""}${seconds}`;
-    }
-
-    function fadeOut(audio, duration, callback) {
-      let step = audio.volume / (duration / 50); // 20ms một lần
-      let fadeInterval = setInterval(() => {
-        if (audio.volume > step) {
-          audio.volume -= step;
+    // Play/Pause nhạc nền
+    function toggleBg() {
+        if (bgMusic.paused) {
+        bgMusic.play();
         } else {
-          audio.volume = 0;
-          clearInterval(fadeInterval);
-          if (callback) callback();
+        bgMusic.pause();
         }
-      }, 50);
     }
 
-    function resumeBackground() {
-      if (bgAudio.src !== "") {
-        bgAudio.play();
-        playPauseBtn.textContent = "Pause";
-        statusText.textContent = "Tiếp tục nhạc nền";
-      } else {
-        statusText.textContent = "Không có nhạc nền";
-      }
+    // Phát hiệu ứng
+    function playSfx(id) {
+        stopSfx(true); // ngưng SFX cũ nếu có (không fade)
+        bgMusic.pause();
+
+        currentSfx = document.getElementById(id);
+        currentSfx.currentTime = 0;
+        currentSfx.volume = 1;
+        currentSfx.play();
+
+        // Khi SFX kết thúc → phát lại nhạc nền
+        currentSfx.onended = () => {
+        currentSfx = null;
+        bgMusic.play();
+        };
     }
+
+    // Ngưng SFX (có fade-out)
+    function stopSfx(immediate = false) {
+        if (currentSfx) {
+        clearInterval(fadeInterval);
+
+        if (immediate) {
+            currentSfx.pause();
+            currentSfx.currentTime = 0;
+            currentSfx = null;
+            bgMusic.play();
+            return;
+        }
+
+        fadeInterval = setInterval(() => {
+            if (currentSfx && currentSfx.volume > 0.1) {
+            currentSfx.volume -= 0.1;
+            } else if (currentSfx) {
+            currentSfx.pause();
+            currentSfx.currentTime = 0;
+            currentSfx.volume = 1;
+            currentSfx = null;
+            clearInterval(fadeInterval);
+            bgMusic.play();
+            }
+        }, 100);
+        }
+    }
+
+    // Nút Ngưng SFX hoạt động trên mobile
+    document.getElementById("stopSfxBtn").addEventListener("touchstart", () => stopSfx());
+    document.getElementById("stopSfxBtn").addEventListener("click", () => stopSfx());
+
+    // Thanh seek cho nhạc nền
+    bgMusic.addEventListener("loadedmetadata", () => {
+        seekBar.max = bgMusic.duration;
+    });
+
+    bgMusic.addEventListener("timeupdate", () => {
+        seekBar.value = bgMusic.currentTime;
+    });
+
+    seekBar.addEventListener("input", () => {
+        bgMusic.currentTime = seekBar.value;
+    });
   </script>
 </body>
 </html>
