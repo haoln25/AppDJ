@@ -81,6 +81,7 @@
     <div class="section-title">Nhạc nền</div>
     <div class="buttons">
       <button data-bg="bg1.mp3">Background 1</button>
+
       <button data-bg="Buon.mp3">BG2. Buồn</button>
       <button data-bg="bg1.mp3">Background 1</button>
       <button data-bg="affterchuyensinh.mp3">BG3.Chuyển Sinh</button>
@@ -119,69 +120,75 @@
     </div>
   </div>
 
+   <!-- Chỉ 2 thẻ audio duy nhất -->
+  <audio id="bgAudio" loop></audio>
+  <audio id="sfxAudio"></audio>
+
   <script>
+    const bgAudio = document.getElementById("bgAudio");
+    const sfxAudio = document.getElementById("sfxAudio");
+
     const statusText = document.getElementById("status");
     const playPauseBtn = document.getElementById("playPauseBtn");
     const seekBar = document.getElementById("seekBar");
     const timeDisplay = document.getElementById("time");
     const stopSfxBtn = document.getElementById("stopSfxBtn");
 
-    let bgAudio = null;
-    let currentSfx = null;
-
     // --- Nhạc nền ---
     document.querySelectorAll("[data-bg]").forEach(btn => {
       btn.addEventListener("click", () => {
-        if (bgAudio) {
-          bgAudio.pause();
-          bgAudio.currentTime = 0;
-        }
-        bgAudio = new Audio("sounds/" + btn.dataset.bg);
-        bgAudio.loop = true;
+        bgAudio.src = "sounds/" + btn.dataset.bg;
+        bgAudio.load();
         bgAudio.play();
         playPauseBtn.textContent = "Pause";
         statusText.textContent = "Đang phát nhạc nền: " + btn.textContent;
-
-        bgAudio.addEventListener("timeupdate", () => {
-          seekBar.value = (bgAudio.currentTime / bgAudio.duration) * 100;
-          updateTime();
-        });
       });
+    });
+
+    bgAudio.addEventListener("timeupdate", () => {
+      if (bgAudio.duration) {
+        seekBar.value = (bgAudio.currentTime / bgAudio.duration) * 100;
+        updateTime();
+      }
     });
 
     // --- Hiệu ứng ---
     document.querySelectorAll("[data-sfx]").forEach(btn => {
       btn.addEventListener("click", () => {
-        if (bgAudio && !bgAudio.paused) {
+        if (!sfxAudio.paused) {
+          sfxAudio.pause();
+          sfxAudio.currentTime = 0;
+        }
+
+        if (!bgAudio.paused) {
           bgAudio.pause();
         }
-        if (currentSfx) {
-          currentSfx.pause();
-          currentSfx.currentTime = 0;
-        }
-        currentSfx = new Audio("sounds/" + btn.dataset.sfx);
-        currentSfx.volume = 1.0;
-        currentSfx.play();
+
+        sfxAudio.src = "sounds/" + btn.dataset.sfx;
+        sfxAudio.volume = 1;
+        sfxAudio.load();
+        sfxAudio.play();
         statusText.textContent = "Hiệu ứng: " + btn.textContent;
-
-        currentSfx.addEventListener("timeupdate", () => {
-          if (currentSfx.duration && currentSfx.currentTime > currentSfx.duration - 1.5) {
-            fadeOut(currentSfx, 1000);
-          }
-        });
-
-        currentSfx.onended = () => {
-          resumeBackground();
-        };
       });
+    });
+
+    // Fade-out khi hiệu ứng gần hết
+    sfxAudio.addEventListener("timeupdate", () => {
+      if (sfxAudio.duration && sfxAudio.currentTime > sfxAudio.duration - 1.2) {
+        fadeOut(sfxAudio, 1000);
+      }
+    });
+
+    sfxAudio.addEventListener("ended", () => {
+      resumeBackground();
     });
 
     // --- Kết thúc sớm hiệu ứng ---
     stopSfxBtn.addEventListener("click", () => {
-      if (currentSfx) {
-        fadeOut(currentSfx, 500, () => {
-          currentSfx.pause();
-          currentSfx.currentTime = 0;
+      if (!sfxAudio.paused) {
+        fadeOut(sfxAudio, 500, () => {
+          sfxAudio.pause();
+          sfxAudio.currentTime = 0;
           resumeBackground();
         });
       }
@@ -189,7 +196,7 @@
 
     // --- Play / Pause ---
     playPauseBtn.addEventListener("click", () => {
-      if (!bgAudio) return;
+      if (bgAudio.src === "") return;
       if (bgAudio.paused) {
         bgAudio.play();
         playPauseBtn.textContent = "Pause";
@@ -201,14 +208,13 @@
 
     // --- Seek ---
     seekBar.addEventListener("input", () => {
-      if (bgAudio) {
+      if (bgAudio.duration) {
         bgAudio.currentTime = (seekBar.value / 100) * bgAudio.duration;
       }
     });
 
     // --- Hàm tiện ích ---
     function updateTime() {
-      if (!bgAudio) return;
       const current = formatTime(bgAudio.currentTime);
       const total = formatTime(bgAudio.duration);
       timeDisplay.textContent = `${current} / ${total}`;
@@ -222,7 +228,7 @@
     }
 
     function fadeOut(audio, duration, callback) {
-      let step = audio.volume / (duration / 100);
+      let step = audio.volume / (duration / 50); // 20ms một lần
       let fadeInterval = setInterval(() => {
         if (audio.volume > step) {
           audio.volume -= step;
@@ -231,11 +237,11 @@
           clearInterval(fadeInterval);
           if (callback) callback();
         }
-      }, 100);
+      }, 50);
     }
 
     function resumeBackground() {
-      if (bgAudio) {
+      if (bgAudio.src !== "") {
         bgAudio.play();
         playPauseBtn.textContent = "Pause";
         statusText.textContent = "Tiếp tục nhạc nền";
