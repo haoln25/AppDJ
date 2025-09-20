@@ -1,0 +1,248 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Sound App</title>
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      background: #f0f6fc;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      min-height: 100vh;
+      margin: 0;
+    }
+    .app {
+      width: 360px;
+      border: 2px solid #000;
+      border-radius: 10px;
+      background: #fff;
+      display: flex;
+      flex-direction: column;
+      padding: 10px;
+    }
+    .header {
+      text-align: center;
+      font-weight: bold;
+      font-size: 20px;
+      padding: 10px;
+      border: 2px solid #000;
+      margin-bottom: 15px;
+    }
+    .section-title {
+      font-weight: bold;
+      margin: 10px 0 5px;
+    }
+    .buttons {
+      display: grid;
+      grid-template-columns: repeat(2, 1fr);
+      gap: 10px;
+      justify-items: center;
+    }
+    .buttons button {
+      width: 120px;
+      height: 40px;
+      border: 2px solid #000;
+      border-radius: 6px;
+      cursor: pointer;
+      background: #1e90ff;
+      color: #fff;
+      font-size: 14px;
+      font-weight: bold;
+      transition: background 0.2s;
+    }
+    .buttons button:hover {
+      background: #0d6efd;
+    }
+    .footer {
+      margin-top: 20px;
+      border: 2px solid #000;
+      padding: 10px;
+      font-weight: bold;
+      text-align: center;
+    }
+    .controls {
+      margin-top: 10px;
+    }
+    .seek-bar {
+      width: 100%;
+      margin-top: 5px;
+    }
+  </style>
+</head>
+<body>
+  <div class="app">
+    <!-- Header -->
+    <div class="header">Sound App</div>
+
+    <!-- Nhạc nền -->
+    <div class="section-title">Nhạc nền</div>
+    <div class="buttons">
+      <button data-bg="bg1.mp3">Background 1</button>
+      <button data-bg="Buon.mp3">BG2. Buồn</button>
+      <button data-bg="bg1.mp3">Background 1</button>
+      <button data-bg="affterchuyensinh.mp3">BG3.Chuyển Sinh</button>
+      <button data-bg="mario.mp3">BG5 Game Ải 1</button>
+      <button data-bg="bg1.mp3">Background 1</button>
+    </div>
+
+    <!-- Âm thanh hiệu ứng -->
+    <div class="section-title">Âm thanh hiệu ứng</div>
+    <div class="buttons">
+      <button data-sfx="XuyenKhong.mp3">Sfx.Xuyên Không</button>
+      <button data-sfx="vica.mp3">Sfx. Anh vi cá</button>
+      <button data-sfx="sfxxihoi.mp3">Sfx.Xì hơi</button>
+      <button data-sfx="effect4.mp3">Hiệu ứng 4</button>
+      <button data-sfx="XuyenKhong.mp3">Sfx.Xuyên Không</button>
+      <button data-sfx="vica.mp3">Sfx. Anh vi cá</button>
+      <button data-sfx="sfxxihoi.mp3">Sfx.Xì hơi</button>
+      <button data-sfx="effect4.mp3">Hiệu ứng 4</button>
+      <button data-sfx="XuyenKhong.mp3">Sfx.Xuyên Không</button>
+      <button data-sfx="effect4.mp3">Hiệu ứng 4</button>
+    </div>
+
+    <!-- Footer -->
+    <div class="footer">
+      <div id="status">Trạng thái: Chưa phát gì</div>
+      <!-- Controls nhạc nền -->
+      <div class="controls">
+        <button id="playPauseBtn">Play</button>
+        <input type="range" id="seekBar" class="seek-bar" value="0" min="0" max="100">
+        <div id="time">0:00 / 0:00</div>
+      </div>
+      <!-- Nút kết thúc hiệu ứng -->
+      <div class="controls">
+        <button id="stopSfxBtn">Kết thúc hiệu ứng</button>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    const statusText = document.getElementById("status");
+    const playPauseBtn = document.getElementById("playPauseBtn");
+    const seekBar = document.getElementById("seekBar");
+    const timeDisplay = document.getElementById("time");
+    const stopSfxBtn = document.getElementById("stopSfxBtn");
+
+    let bgAudio = null;
+    let currentSfx = null;
+
+    // --- Nhạc nền ---
+    document.querySelectorAll("[data-bg]").forEach(btn => {
+      btn.addEventListener("click", () => {
+        if (bgAudio) {
+          bgAudio.pause();
+          bgAudio.currentTime = 0;
+        }
+        bgAudio = new Audio("sounds/" + btn.dataset.bg);
+        bgAudio.loop = true;
+        bgAudio.play();
+        playPauseBtn.textContent = "Pause";
+        statusText.textContent = "Đang phát nhạc nền: " + btn.textContent;
+
+        bgAudio.addEventListener("timeupdate", () => {
+          seekBar.value = (bgAudio.currentTime / bgAudio.duration) * 100;
+          updateTime();
+        });
+      });
+    });
+
+    // --- Hiệu ứng ---
+    document.querySelectorAll("[data-sfx]").forEach(btn => {
+      btn.addEventListener("click", () => {
+        if (bgAudio && !bgAudio.paused) {
+          bgAudio.pause();
+        }
+        if (currentSfx) {
+          currentSfx.pause();
+          currentSfx.currentTime = 0;
+        }
+        currentSfx = new Audio("sounds/" + btn.dataset.sfx);
+        currentSfx.volume = 1.0;
+        currentSfx.play();
+        statusText.textContent = "Hiệu ứng: " + btn.textContent;
+
+        currentSfx.addEventListener("timeupdate", () => {
+          if (currentSfx.duration && currentSfx.currentTime > currentSfx.duration - 1.5) {
+            fadeOut(currentSfx, 1000);
+          }
+        });
+
+        currentSfx.onended = () => {
+          resumeBackground();
+        };
+      });
+    });
+
+    // --- Kết thúc sớm hiệu ứng ---
+    stopSfxBtn.addEventListener("click", () => {
+      if (currentSfx) {
+        fadeOut(currentSfx, 500, () => {
+          currentSfx.pause();
+          currentSfx.currentTime = 0;
+          resumeBackground();
+        });
+      }
+    });
+
+    // --- Play / Pause ---
+    playPauseBtn.addEventListener("click", () => {
+      if (!bgAudio) return;
+      if (bgAudio.paused) {
+        bgAudio.play();
+        playPauseBtn.textContent = "Pause";
+      } else {
+        bgAudio.pause();
+        playPauseBtn.textContent = "Play";
+      }
+    });
+
+    // --- Seek ---
+    seekBar.addEventListener("input", () => {
+      if (bgAudio) {
+        bgAudio.currentTime = (seekBar.value / 100) * bgAudio.duration;
+      }
+    });
+
+    // --- Hàm tiện ích ---
+    function updateTime() {
+      if (!bgAudio) return;
+      const current = formatTime(bgAudio.currentTime);
+      const total = formatTime(bgAudio.duration);
+      timeDisplay.textContent = `${current} / ${total}`;
+    }
+
+    function formatTime(sec) {
+      if (isNaN(sec)) return "0:00";
+      let minutes = Math.floor(sec / 60);
+      let seconds = Math.floor(sec % 60);
+      return `${minutes}:${seconds < 10 ? "0" : ""}${seconds}`;
+    }
+
+    function fadeOut(audio, duration, callback) {
+      let step = audio.volume / (duration / 100);
+      let fadeInterval = setInterval(() => {
+        if (audio.volume > step) {
+          audio.volume -= step;
+        } else {
+          audio.volume = 0;
+          clearInterval(fadeInterval);
+          if (callback) callback();
+        }
+      }, 100);
+    }
+
+    function resumeBackground() {
+      if (bgAudio) {
+        bgAudio.play();
+        playPauseBtn.textContent = "Pause";
+        statusText.textContent = "Tiếp tục nhạc nền";
+      } else {
+        statusText.textContent = "Không có nhạc nền";
+      }
+    }
+  </script>
+</body>
+</html>
