@@ -42,7 +42,7 @@
       justify-items: center;
     }
     .buttons button {
-      width: 140px;
+      width: 120px;
       height: 40px;
       border: 2px solid #000;
       border-radius: 6px;
@@ -80,19 +80,27 @@
     <!-- Nhạc nền -->
     <div class="section-title">Nhạc nền</div>
     <div class="buttons">
-      <button data-bg="bg1">Background 1</button>
-      <button data-bg="Buon">BG2. Buồn</button>
-      <button data-bg="affterchuyensinh">BG3. Chuyển Sinh</button>
-      <button data-bg="mario">BG4. Mario</button>
+      <button data-bg="bg1.mp3">Background 1</button>
+      <button data-bg="Buon.mp3">BG2. Buồn</button>
+      <button data-bg="bg1.mp3">Background 1</button>
+      <button data-bg="affterchuyensinh.mp3">BG3.Chuyển Sinh</button>
+      <button data-bg="mario.mp3">BG5 Game Ải 1</button>
+      <button data-bg="bg1.mp3">Background 1</button>
     </div>
 
     <!-- Âm thanh hiệu ứng -->
     <div class="section-title">Âm thanh hiệu ứng</div>
     <div class="buttons">
-      <button data-sfx="XuyenKhong">Sfx. Xuyên Không</button>
-      <button data-sfx="Vica">Sfx. Anh Vi Cá</button>
-      <button data-sfx="sfxxihoi">Sfx. Xì hơi</button>
-      <button data-sfx="effect4">Hiệu ứng 4</button>
+      <button data-sfx="XuyenKhong.mp3">Sfx.Xuyên Không</button>
+      <button data-sfx="Vica.mp3">Sfx. Anh vi cá</button>
+      <button data-sfx="sfxxihoi.mp3">Sfx.Xì hơi</button>
+      <button data-sfx="effect4.mp3">Hiệu ứng 4</button>
+      <button data-sfx="XuyenKhong.mp3">Sfx.Xuyên Không</button>
+      <button data-sfx="vica.mp3">Sfx. Anh vi cá</button>
+      <button data-sfx="sfxxihoi.mp3">Sfx.Xì hơi</button>
+      <button data-sfx="effect4.mp3">Hiệu ứng 4</button>
+      <button data-sfx="XuyenKhong.mp3">Sfx.Xuyên Không</button>
+      <button data-sfx="effect4.mp3">Hiệu ứng 4</button>
     </div>
 
     <!-- Footer -->
@@ -120,31 +128,6 @@
 
     let bgAudio = null;
     let currentSfx = null;
-    let fadeInterval = null;
-
-    // --- Preload tất cả âm thanh ---
-    const sounds = {
-      bg1: new Audio("sounds/bg1.mp3"),
-      Buon: new Audio("sounds/Buon.mp3"),
-      affterchuyensinh: new Audio("sounds/affterchuyensinh.mp3"),
-      mario: new Audio("sounds/mario.mp3"),
-      XuyenKhong: new Audio("sounds/XuyenKhong.mp3"),
-      Vica: new Audio("sounds/Vica.mp3"),
-      sfxxihoi: new Audio("sounds/sfxxihoi.mp3"),
-      effect4: new Audio("sounds/effect4.mp3")
-    };
-
-    // Đặt loop cho nhạc nền
-    ["bg1", "Buon", "affterchuyensinh", "mario"].forEach(k => {
-      sounds[k].loop = true;
-    });
-
-    // --- Unlock audio trên mobile ---
-    document.body.addEventListener("touchstart", () => {
-      Object.values(sounds).forEach(a => {
-        a.play().then(() => a.pause());
-      });
-    }, { once: true });
 
     // --- Nhạc nền ---
     document.querySelectorAll("[data-bg]").forEach(btn => {
@@ -153,17 +136,15 @@
           bgAudio.pause();
           bgAudio.currentTime = 0;
         }
-        bgAudio = sounds[btn.dataset.bg];
-        bgAudio.currentTime = 0;
+        bgAudio = new Audio("sounds/" + btn.dataset.bg);
+        bgAudio.loop = true;
         bgAudio.play();
         playPauseBtn.textContent = "Pause";
         statusText.textContent = "Đang phát nhạc nền: " + btn.textContent;
 
         bgAudio.addEventListener("timeupdate", () => {
-          if (bgAudio.duration) {
-            seekBar.value = (bgAudio.currentTime / bgAudio.duration) * 100;
-            updateTime();
-          }
+          seekBar.value = (bgAudio.currentTime / bgAudio.duration) * 100;
+          updateTime();
         });
       });
     });
@@ -178,8 +159,7 @@
           currentSfx.pause();
           currentSfx.currentTime = 0;
         }
-        currentSfx = sounds[btn.dataset.sfx];
-        currentSfx.currentTime = 0;
+        currentSfx = new Audio("sounds/" + btn.dataset.sfx);
         currentSfx.volume = 1.0;
         currentSfx.play();
         statusText.textContent = "Hiệu ứng: " + btn.textContent;
@@ -198,7 +178,7 @@
 
     // --- Kết thúc sớm hiệu ứng ---
     stopSfxBtn.addEventListener("click", () => {
-      if (currentSfx && !currentSfx.paused) {
+      if (currentSfx) {
         fadeOut(currentSfx, 500, () => {
           currentSfx.pause();
           currentSfx.currentTime = 0;
@@ -221,7 +201,7 @@
 
     // --- Seek ---
     seekBar.addEventListener("input", () => {
-      if (bgAudio && bgAudio.duration) {
+      if (bgAudio) {
         bgAudio.currentTime = (seekBar.value / 100) * bgAudio.duration;
       }
     });
@@ -242,15 +222,13 @@
     }
 
     function fadeOut(audio, duration, callback) {
-      if (fadeInterval) clearInterval(fadeInterval);
       let step = audio.volume / (duration / 100);
-      fadeInterval = setInterval(() => {
+      let fadeInterval = setInterval(() => {
         if (audio.volume > step) {
           audio.volume -= step;
         } else {
           audio.volume = 0;
           clearInterval(fadeInterval);
-          fadeInterval = null;
           if (callback) callback();
         }
       }, 100);
